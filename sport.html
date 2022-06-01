@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset = "utf 8">
+        <link rel = "stylesheet" href = "sport.css">
+
+ </head>
+<body>
+<div id="app">
+        <div class="selection">
+            <select v-model="select">
+                <option v-for="(callories, exercise) in exercises">{{exercise}}</option> 
+            </select>
+            <div class="setReps" v-if="exercises[select]['measuring']=='reps'"> 
+                <div class="setWrap">
+                    <div>REPS:{{reps}}</div>
+                    <sets @plus="plus('reps')" @minus="minus('reps')"></sets>
+                </div>
+                <div class="setWrap">
+                    <div>SETS:{{sets}}</div>
+                    <sets @plus="plus('sets')" @minus="minus('sets')"></sets>
+                </div>
+                <div class="setWrap">
+                    Ccal: {{totalCallories}}
+                </div>
+                <button @click="writeDown" class="button">OK</button>
+            </div>
+            <div class="setter" v-if="exercises[select]['measuring']=='time'">
+                <div class="setTime">
+                    <div class="timeWrap">
+                        <div>hours:</div>
+                        <timer :mins="hours" @plus="plusTime('hours')" @minus="minusTime('hours')"></timer>
+                    </div>
+                    <div class="timeWrap">
+                        <div>mins:</div>
+                        <timer :mins="mins" @plus="plusTime('mins')" @minus="minusTime('mins')"></timer>
+                    </div>
+                    <div class="timeWrap">
+                        <div>sec:</div>
+                        <timer :mins="sec" @plus="plusTime('sec')" @minus="minusTime('sec')"></timer>
+                    </div>
+                    <ccal :x="timeCallories"></ccal>
+                    <button @click="writeDown" class="button">OK</button>
+                </div>
+            </div>
+            <div class="setNew" v-if="exercises[select]=='new'">
+                <div>
+                    Name: <input type="text" v-model="newName">
+                </div>
+                <div>
+                    Callories: <input type="text" v-model="newCallories">
+                </div>
+                <div>
+                    time or reps? <select v-model="newMeasuring">
+                        <option>time</option>
+                        <option>reps</option>
+                    </select>
+                </div>
+                <button @click="record" class="record">RECORD</button>
+            </div>
+        </div>
+    <div class="list" v-for="(elems, index) in list">
+        <div class="activity">
+            <div class="cell" v-for="(elem) in elems">{{elem}}</div>
+        </div>
+        <div>
+            <button @click="done($event, elems)" class="deleteButton">DONE</button>
+            <button @click="del(index)" class="deleteButton">DELETE</button>
+        </div>
+    </div>
+    <div class="result">
+        <div>
+           Spended callories: {{spendedCallories}}
+        </div>
+        <div>
+            Done exercises: {{doneExercises}}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script>
+Vue.component ('sets', {
+    template: `<div class="measuring">
+            <div class="plus" @click="$emit('plus')"><span class="linePlus"></span></div>
+            <div class="minus" @click="$emit('minus')"><span class="line"></span></div>
+            </div>`
+})
+Vue.component ('timer',{
+    props: ['mins',],
+    template: `<div class="time">
+                        {{mins}}
+                        <div class="plus" @click="$emit('plus')"><span class="linePlus"></span></div>
+                        <div class="minus" @click="$emit('minus')"><span class="line"></span></div>
+                    </div>`
+})
+Vue.component ('ccal', {
+    props: ['x'],
+    template: '<div class="ccal">{{x}} ccal</div>'
+})
+let app = new Vue ({
+    el: '#app',
+    data: {
+        exercises: {
+            'run': {'callories': 11, 'measuring': 'time'},
+            'jump': {'callories': 7, 'measuring': 'time'},
+            'bench': {'callories': 20, 'measuring': 'reps'},
+            'new':'new',
+        },
+        select: 'bench',
+        reps: '0',
+        sets: '0',
+        hours: '00',
+        mins: '00',
+        sec: '00',
+        newName: '',
+        newCallories: '',
+        newMeasuring: '',
+        spendedCallories: 0,
+        doneExercises: 0,
+        list: [
+        ],
+    },
+    methods: {
+        plus: function (elem) {
+            this[elem] = Number(this[elem])+1
+        },
+        minus: function (elem) {
+            if (Number(this[elem] == 0)) {return} else {
+            this[elem] = Number(this[elem])-1}
+        },
+        plusTime: function(time) {
+        if (this[time]=='59') {return}
+        this[time] = Number(this[time])+1
+        if (Number(this[time]) < 10) {
+            this[time] = '0' + this[time]
+        }
+        },
+
+        minusTime: function(time) {
+        if (this[time]=='00') {return}
+        this[time] = Number(this[time])-1
+        if (Number(this[time]) < 10) {
+            this[time] = '0' + this[time]
+        }
+        },
+        writeDown: function() {
+            let a=[];
+            if (this.exercises[this.select]['measuring']=='reps') {
+                if (this.totalCallories!=0) {
+                a.push(this.select, 'Ccal: '+this.totalCallories, 'sets: '+this.sets, 'reps: '+this.reps)} else {return}
+            } else {
+                if (this.timeCallories!=0) {
+                a.push(this.select, 'Ccal: '+this.timeCallories, 'time: '+this.totalTime)} else {return}
+            }
+            this.list.push(a)
+            this.reps = '0';
+            this.sets = '0';
+            this.hours = '00';
+            this.mins = '00';
+            this.sec = '00';
+        },
+        del: function(index) {
+            this.list.splice(index, 1)
+        },
+        done: function(event, elems) {
+            const{target} = event;
+            target.closest('.list').querySelector('.activity').classList.add('done')
+            target.remove()
+            const ccal = Number((elems[1]).replace(/[^0-9.]/gi, ''));
+            this.spendedCallories = this.spendedCallories+ccal;
+            this.doneExercises++;
+        },
+        record: function() {
+            if (/[a-z]|[а-яё]+/.test(this.newCallories)==true||this.newName==''||this.newMeasuring=='') {
+                this.newCallories ='';
+                this.newMeasuring ='';
+                this.newName ='';
+                return;
+            };
+            let a={};
+            a.callories = Number(this.newCallories);
+            a.measuring = this.newMeasuring;
+            Vue.set(this.exercises, this.newName, a);
+            this.newCallories ='';
+            this.newMeasuring ='';
+            this.newName ='';
+        }
+    },
+    computed: {
+        totalCallories: function() {
+            return (this.exercises[this.select]['callories']/12*Number(this.reps)*Number(this.sets)).toFixed(2)
+        },
+        timeCallories: function() {
+            const selectedCallories = this.exercises[this.select]['callories'];
+            let a=selectedCallories*Number(this.mins);
+            a+=selectedCallories*(1/(60/Number(this.sec)))
+            a+=selectedCallories*(Number(this.hours)*60)
+            return a.toFixed(2)
+        },
+        totalTime: function() {
+            return this.hours+':'+this.mins+':'+this.sec
+        }
+    }
+})
+</script>
+
+
+
+</body>
+</html>
